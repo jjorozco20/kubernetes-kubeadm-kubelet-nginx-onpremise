@@ -1,0 +1,47 @@
+name: CI Pipeline for Kubernetes Manifests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate-k8s-manifests:
+    runs-on: ubuntu-latest
+    environment: devops-training  # Environment defined for GitHub Actions
+
+    steps:
+      # Step 1: Check out the code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Install kubectl
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+
+      # Step 3: Substitute environment variables in existing Kubernetes manifests
+      - name: Render Kubernetes Manifests
+        run: |
+          # Replace environment variables in flask-app-deployment.yaml
+          envsubst < manifests/flask-app-deployment.yaml > manifests/flask-app-deployment.yaml.tmp && mv manifests/flask-app-deployment.yaml.tmp manifests/flask-app-deployment.yaml
+
+          # Replace environment variables in mysql-deployment.yaml
+          envsubst < manifests/mysql-deployment.yaml > manifests/mysql-deployment.yaml.tmp && mv manifests/mysql-deployment.yaml.tmp manifests/mysql-deployment.yaml
+
+      # Step 4: List the contents of the manifests directory (debugging step)
+      - name: List contents of manifests directory
+        run: |
+          ls -alh manifests/
+          cat manifests/flask-app-deployment.yaml
+          cat manifests/mysql-deployment.yaml
+
+      # Step 5: Run dry-run for Kubernetes manifests
+      - name: Validate Kubernetes Manifests
+        run: |
+          kubectl apply --dry-run=client -f manifests/

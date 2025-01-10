@@ -3,6 +3,7 @@ apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: mysql-pv
+  namespace: default  # Added namespace
 spec:
   capacity:
     storage: 5Gi  # Specify 5 GiB of storage
@@ -15,6 +16,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mysql-pvc
+  namespace: default  # Added namespace
 spec:
   accessModes:
     - ReadWriteOnce
@@ -27,15 +29,17 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: mysql-secret
+  namespace: default  # Added namespace
 type: Opaque
 data:
-  password: {{ secrets.MYSQL_PASSWORD }}
+  password: "{{ secrets.MYSQL_PASSWORD }}"
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mysql
+  namespace: default  # Added namespace
   labels:
     app: mysql
 spec:
@@ -61,10 +65,21 @@ spec:
               name: mysql-secret
               key: password
         - name: MYSQL_DATABASE
-          value: {{ vars.MYSQL_DB }}  # Database name
+          value: "{{ vars.MYSQL_DB }}"  # Database name
         volumeMounts:
         - mountPath: /var/lib/mysql  # MySQL data directory
           name: mysql-data
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsUser: 1000
+          runAsNonRoot: true
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "512Mi"
+          limits:
+            cpu: "200m"
+            memory: "1Gi"
       volumes:
       - name: mysql-data
         persistentVolumeClaim:
@@ -74,6 +89,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: mysql
+  namespace: default  # Added namespace
   labels:
     app: mysql
 spec:

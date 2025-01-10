@@ -3,50 +3,63 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: flask-app
+  namespace: default  # Ensured namespace is set correctly
   labels:
     app: flask-app
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: flask-app
+      app: flask-app  # Ensure it matches the service selector
   template:
     metadata:
       labels:
-        app: flask-app
+        app: flask-app  # Ensure the pod label matches the service selector
     spec:
       containers:
       - name: flask-app
-        image: jjorozco20/flask-mysql-app:latest
+        image: jjorozco20/flask-mysql-app:1.0.0  # Updated image version
         ports:
         - containerPort: 5000
         env:
         - name: MYSQL_HOST
-          value: {{ vars.MYSQL_HOST }}  # Kubernetes internal service name for MySQL
+          value: "{{ vars.MYSQL_HOST }}"  # Kubernetes internal service name for MySQL
         - name: MYSQL_PORT
-          value: {{ vars.MYSQL_PORT }}
+          value: "{{ vars.MYSQL_PORT }}"
         - name: MYSQL_USER
-          value: {{ vars.MYSQL_USER }}
+          value: "{{ vars.MYSQL_USER }}"
         - name: MYSQL_PASSWORD
           valueFrom:
             secretKeyRef:
               name: mysql-secret
               key: password
         - name: MYSQL_DB
-          value: {{ vars.MYSQL_DB }}
+          value: "{{ vars.MYSQL_DB }}"
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsUser: 1000
+          runAsNonRoot: true
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "512Mi"
+          limits:
+            cpu: "200m"
+            memory: "1Gi"
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: flask-app
+  namespace: default  # Ensured namespace is set correctly
 spec:
   ports:
     - port: 5000  # Flask app runs on port 5000 inside the cluster
       protocol: TCP
       targetPort: 5000
   selector:
-    app: flask-app
+    app: flask-app  # Ensure the selector matches the label in Deployment
   type: ClusterIP  # Expose the service on a cluster-internal IP
 
 ---
@@ -54,6 +67,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: flask-ingress
+  namespace: default  # Ensured namespace is set correctly
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
@@ -66,6 +80,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: flask-app
+            name: flask-app  # Service name correctly referenced
             port:
               number: 5000
