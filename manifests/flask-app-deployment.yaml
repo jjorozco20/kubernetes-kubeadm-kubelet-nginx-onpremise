@@ -18,29 +18,25 @@ spec:
         prometheus: main  # Add the prometheus label
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "5000"
+        prometheus.io/port: "{{ vars.FLASK_PORT }}"  # Replace with the correct port
         prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: flask-app
         image: jjorozco20/flask-mysql-app:1.0.0  # Updated image version
         ports:
-        - containerPort: 5000
+        - containerPort: "{{ vars.FLASK_PORT }}"  # Flask app runs on the specified port
         env:
         - name: MYSQL_HOST
-          value: "mysql"  # Kubernetes internal service name for MySQL
+          value: "${{ vars.MYSQL_HOST }}"  # GitHub Actions secret for MySQL host
         - name: MYSQL_PORT
-          value: "3306"
+          value: "${{ vars.MYSQL_PORT }}"  # GitHub Actions secret for MySQL port
         - name: MYSQL_USER
-          value: "root"
+          value: "${{ vars.MYSQL_USER }}"  # GitHub Actions secret for MySQL user
         - name: MYSQL_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: mysql-secret
-              key: password
+          value: "${{ secrets.MYSQL_PASSWORD }}"  # GitHub Actions secret for MySQL password
         - name: MYSQL_DB
-          value: "testdb"
-        securityContext:
+          value: "${{ vars.MYSQL_DB }}"  # GitHub Actions secret for MySQL database     securityContext:
           runAsUser: 1000
           runAsNonRoot: true
         resources:
@@ -59,9 +55,8 @@ metadata:
   namespace: default  # Ensured namespace is set correctly
 spec:
   ports:
-    - port: 5000  # Flask app runs on port 5000 inside the cluster
-      protocol: TCP
-      targetPort: 5000
+    - port: "{{ vars.FLASK_PORT }}"  # Flask app runs on the specified port inside the cluster     protocol: TCP
+      targetPort: "{{ vars.FLASK_PORT }}"
   selector:
     app: flask-app  # Ensure the selector matches the label in Deployment
   type: ClusterIP  # Expose the service on a cluster-internal IP
@@ -75,7 +70,7 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
     prometheus.io/scrape: "true"
-    prometheus.io/port: "9113"   # Replace with the correct port if different
+    prometheus.io/port: "{{ vars.PROMETHEUS_PORT }}"   # Replace with the correct port if different
     prometheus.io/path: "/metrics"
 
 spec:
@@ -90,4 +85,4 @@ spec:
           service:
             name: flask-app  # Service name correctly referenced
             port:
-              number: 5000
+              number: "{{ vars.FLASK_PORT }}"

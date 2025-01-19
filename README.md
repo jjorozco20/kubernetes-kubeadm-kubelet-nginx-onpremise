@@ -1,6 +1,10 @@
-# kubernetes-minikube-onpremise
+# kubernetes-kubeadm-kubelet-nginx-onpremise
 
-In this repo, you will create 2 pods in the `default` namespace to deploy a Flask application and a MySQL server containers. Also, we are going to use `ingress-nginx` (to handle the access to the pods) and `istio-system` (to monitor the cluster) namespaces for tooling. 
+In this repo, you will create 2 pods in the `default` namespace to deploy a Flask application and a MySQL server containers. Also, we are going to use `ingress-nginx` (to handle the access to the pods) and `monitoring` (to monitor the cluster) namespaces for tooling. 
+
+## Infrastructure Overview
+
+![Graphic via Eraser](utils/diagram.png)
 
 ---
 
@@ -24,12 +28,23 @@ Check `mysql-deployment.yml`:
 * Line 51: `value: {{ vars.MYSQL_DB }}  # Database name`
 
 Check `flask-app-deployment.yml`:
-
 * Line 25: `value: {{ vars.MYSQL_HOST }}  # Kubernetes internal service name for MySQL`
 * Line 27: `{{ vars.MYSQL_PORT }}`
 * Line 29: `{{ vars.MYSQL_USER }}`
 * Line 33: `{{ vars.MYSQL_DB }}`
 
+Check `locust-deployment.yml`:
+* Line 23: `value: {{ vars.LOCUST_PORT }}  # Kubernetes internal service name for MySQL`
+* Line 27: `{{ vars.FLASK_HOST }}`
+* Line 40: `{{ vars.LOCUST_PORT }}`
+* Line 41: `{{ vars.LOCUST_PORT }}`
+* Line 112: `{{ vars.LOCUST_PORT }}`
+
+Check `grafana-ingress.yml`:
+* Line 21: `value: {{ vars.GRAFANA_PORT }}  # Kubernetes internal service name for MySQL`
+
+Check `prometheus-ingress.yml`:
+* Line 26: `{{ vars.PROMETHEUS_PORT }}`
 ---
 
 Now that you have the reqs, do this:
@@ -52,9 +67,14 @@ kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Doc
 # We need to install the ingress controller pods for NGINX
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
 
+# Add the Prometheus-Operator Helm chart
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+kubectl create namespace monitoring
+helm install prometheus-operator prometheus-community/kube-prometheus-stack -n monitoring
+
 # To create the pods
-kubectl apply -f flask-app-deployment.yml 
-kubectl apply -f mysql-deployment.yml
+kubectl apply -f manifests/
 
 # Verify the cluster
 kubectl get nodes
@@ -63,6 +83,34 @@ kubectl get services
 kubectl get pods --all-namespaces
 kubectl describe ingress flask-ingress
 
+# NOTE: You can have an issue regarding the Node-Exporter, so for that you will need to add a
+# values.yaml file, and also you are not going to be able to log into grafana with admin in
+# both textboxes, so define that values.yaml file like this:
+
+nodeExporter:
+  hostNetwork: false
+  hostPID: false
+  tolerations: []
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "100m"
+      memory: "128Mi"
+grafana:
+  adminUser: "admin"
+  adminPassword: "newpassword"  # Set a strong password
+  service:
+    type: ClusterIP  # Ensure Grafana is accessible only within the cluster
+
+# And the run this
+kubectl get pods -n monitoring
+
+If crashloopback: 
+kubectl patch ds prometheus-operator-prometheus-node-exporter -n monitoring --type "json" -p '[{"op": "remove", "path" : "/spec/template/spec/containers/0/volumeMounts/2/mountPropagation"}]'
+
+# And there you go.
 # -----------------------------------------------------------------
 
 # In my case I am using WSL, so I have everything working inside containers, they are a totally different host, unknown for my physical host, so we need to add twice this line in the WSL console (or file) and in system32 file.
@@ -105,12 +153,11 @@ kubectl delete -f flask-app-deployment.yml
 kubectl delete -f mysql-deployment.yml
 kubectl delete -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
 kubectl delete -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
-
+helm uninstall prometheus-operator prometheus-community/kube-prometheus-stack -n monitoring
 # Follow for more! :D
 
 # Also I did the curl test in both consoles and worked pretty well
 ```
 
-![Console test of curl in both envs](utils/console-curl.png)
-
 And there you gooooooo!
+Follow for more! :D

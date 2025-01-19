@@ -23,4 +23,4 @@ spec:
           service:
             name: prometheus-operator-kube-p-prometheus
             port:
-              number: 9090
+              number: "{{ vars.PROMETHEUS_PORT }}"

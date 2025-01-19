@@ -10,7 +10,7 @@ spec:
   accessModes:
     - ReadWriteOnce  # Access mode (single node read/write)
   hostPath:
-    path: "/mnt/c/Users/Juan.Orozco/Desktop/kubernetes-kubeadm-kubelet-nginx-onpremise"  # Adjust for your Windows/Linux environment
+    path: "${{ vars.HOST_PATH }}"  # Adjust for your Windows/Linux environment
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -32,7 +32,7 @@ metadata:
   namespace: default  # Added namespace
 type: Opaque
 data:
-  password: "rootpassword"
+  password: "${{ secrets.MYSQL_PASSWORD }}"  # Use GitHub Actions secret
 
 ---
 apiVersion: apps/v1
@@ -54,14 +54,14 @@ spec:
         app: mysql
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "3306"
+        prometheus.io/port: "${{ vars.PROMETHEUS_PORT }}"  # Use GitHub Actions secret
         prometheus.io/path: "/metrics" # Use a metrics exporter for MySQL
     spec:
       containers:
       - name: mysql
         image: mysql:5.7
         ports:
-        - containerPort: 3306
+        - containerPort: ${{ vars.MYSQL_PORT }}  # Use GitHub Actions secret
           name: db-container
         env:
         - name: MYSQL_ROOT_PASSWORD
@@ -70,7 +70,7 @@ spec:
               name: mysql-secret
               key: password
         - name: MYSQL_DATABASE
-          value: "testdb"  # Database name
+          value: "${{ vars.MYSQL_DATABASE }}"  # Database name
         volumeMounts:
         - mountPath: /var/lib/mysql  # MySQL data directory
           name: mysql-data
@@ -99,8 +99,8 @@ metadata:
 spec:
   ports:
     - protocol: TCP
-      port: 3306  # MySQL default port
-      targetPort: 3306
+      port: ${{ vars.MYSQL_PORT }}  # Use GitHub Actions secret
+      targetPort: ${{ vars.MYSQL_PORT }}
       name: mysql-port
   selector:
     app: mysql

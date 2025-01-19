@@ -20,11 +20,11 @@ spec:
       - name: locust
         image: locustio/locust:latest
         ports:
-        - containerPort: 8089  # Default Locust Web UI port
+        - containerPort: "{{ vars.LOCUST_PORT }}"  # Default Locust Web UI port
         volumeMounts:
         - name: locust-file
           mountPath: /mnt/locust
-        command: ["locust", "-f", "/mnt/locust/locustfile.py", "--host=http://flask.local"]
+        command: ["locust", "-f", "/mnt/locust/locustfile.py", "--host={{ vars.FLASK_HOST }}"]
       volumes:
       - name: locust-file
         configMap:
@@ -37,8 +37,8 @@ metadata:
   namespace: locust-loadtest
 spec:
   ports:
-  - port: 8089
-    targetPort: 8089
+  - port: "{{ vars.LOCUST_PORT }}"
+    targetPort: "{{ vars.LOCUST_PORT }}"
     protocol: TCP
   selector:
     app: locust
@@ -109,4 +109,4 @@ spec:
           service:
             name: locust  # Service name correctly referenced
             port:
-              number: 8089
+              number: "{{ vars.LOCUST_PORT }}"
