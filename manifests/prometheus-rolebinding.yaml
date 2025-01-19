@@ -1,0 +1,56 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus-access-default
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: prometheus-operator
+  namespace: monitoring
+roleRef:
+  kind: Role
+  name: prometheus-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  evaluationInterval: 30s
+  scrapeInterval: 30s
+  serviceAccountName: prometheus-operator
+  podMonitorSelector: 
+    matchLabels:
+      prometheus: main
+  serviceMonitorSelector: {}
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "400Mi"
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: flask-prometheus
+  namespace: monitoring  # Keep this in the monitoring namespace
+  labels:
+    prometheus: main  # Ensure it uses the prometheus label
+spec:
+  namespaceSelector:
+    matchNames:
+      - default  # Target the default namespace
+  selector:
+    matchLabels:
+      prometheus: main  # Match the prometheus label on flask and mysql pods
+  podMetricsEndpoints:
+    - port: "5000"
+      path: "/metrics"
+      interval: 30s
+    - port: "3306"
+      path: "/metrics"
+      interval: 30s

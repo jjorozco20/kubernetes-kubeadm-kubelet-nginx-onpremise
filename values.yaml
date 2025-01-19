@@ -1,0 +1,24 @@
+nodeExporter:
+  hostNetwork: false
+  hostPID: false
+  tolerations: []
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "100m"
+      memory: "128Mi"
+grafana:
+  smtp:
+    enabled: true
+    host: "smtp-relay.gmail.com:587"
+    user: "juan.orozco@jalasoft.com"
+    password: "Jgoldscope20!21"
+    fromAddress: "juan.orozco@jalasoft.com"
+    fromName: Grafana Alerts
+    skipVerify: false
+  adminUser: "admin"
+  adminPassword: "newpassword"  # Set a strong password
+  service:
+    type: ClusterIP  # Ensure Grafana is accessible only within the cluster

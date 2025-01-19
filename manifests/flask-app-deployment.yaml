@@ -15,6 +15,11 @@ spec:
     metadata:
       labels:
         app: flask-app  # Ensure the pod label matches the service selector
+        prometheus: main  # Add the prometheus label
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5000"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: flask-app
@@ -23,20 +28,19 @@ spec:
         - containerPort: 5000
         env:
         - name: MYSQL_HOST
-          value: "{{ vars.MYSQL_HOST }}"  # Kubernetes internal service name for MySQL
+          value: "mysql"  # Kubernetes internal service name for MySQL
         - name: MYSQL_PORT
-          value: "{{ vars.MYSQL_PORT }}"
+          value: "3306"
         - name: MYSQL_USER
-          value: "{{ vars.MYSQL_USER }}"
+          value: "root"
         - name: MYSQL_PASSWORD
           valueFrom:
             secretKeyRef:
               name: mysql-secret
               key: password
         - name: MYSQL_DB
-          value: "{{ vars.MYSQL_DB }}"
+          value: "testdb"
         securityContext:
-          readOnlyRootFilesystem: true
           runAsUser: 1000
           runAsNonRoot: true
         resources:
@@ -70,6 +74,10 @@ metadata:
   namespace: default  # Ensured namespace is set correctly
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9113"   # Replace with the correct port if different
+    prometheus.io/path: "/metrics"
+
 spec:
   ingressClassName: nginx
   rules:

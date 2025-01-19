@@ -1,0 +1,45 @@
+{
+    "title": "Cluster Monitoring Dashboard",
+    "panels": [
+      {
+        "type": "clustermap",
+        "title": "Pod CPU Usage",
+        "targets": [
+          {
+            "expr": "sum(rate(container_cpu_usage_seconds_total{container!='', pod!=''}[5m])) by (pod)"
+          }
+        ],
+        "options": {
+          "colorBy": "cpu",
+          "unit": "percent"
+        }
+      },
+      {
+        "type": "clustermap",
+        "title": "Ingress Traffic (Flask App)",
+        "targets": [
+          {
+            "expr": "sum(rate(nginx_ingress_controller_requests{ingress='flask-ingress'}[5m])) by (ingress)"
+          }
+        ],
+        "options": {
+          "colorBy": "traffic",
+          "unit": "requests"
+        }
+      },
+      {
+        "type": "clustermap",
+        "title": "Kubelet Node Metrics",
+        "targets": [
+          {
+            "expr": "sum(rate(container_cpu_usage_seconds_total{image='k8s.gcr.io/pause:3.2'}[5m])) by (node)"
+          }
+        ],
+        "options": {
+          "colorBy": "cpu",
+          "unit": "percent"
+        }
+      }
+    ]
+  }
+  

@@ -1,0 +1,112 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: locust
+  namespace: locust-loadtest
+  labels:
+    app: locust
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: locust
+  template:
+    metadata:
+      labels:
+        app: locust
+    spec:
+      containers:
+      - name: locust
+        image: locustio/locust:latest
+        ports:
+        - containerPort: 8089  # Default Locust Web UI port
+        volumeMounts:
+        - name: locust-file
+          mountPath: /mnt/locust
+        command: ["locust", "-f", "/mnt/locust/locustfile.py", "--host=http://flask.local"]
+      volumes:
+      - name: locust-file
+        configMap:
+          name: locust-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: locust
+  namespace: locust-loadtest
+spec:
+  ports:
+  - port: 8089
+    targetPort: 8089
+    protocol: TCP
+  selector:
+    app: locust
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: locust-config
+  namespace: locust-loadtest
+data:
+  locustfile.py: |
+    from locust import HttpUser, task, between
+
+    class FlaskAppUser(HttpUser):
+        wait_time = between(1, 2)  # Short wait time to maximize load on pods
+
+        @task(50)  # 50% of requests target the home page
+        def access_home(self):
+            self.client.get("/")
+
+        @task(20)  # 20% of requests target the add item page
+        def add_item_page(self):
+            self.client.get("/add")
+
+        @task(10)  # 10% of requests submit a new item (POST)
+        def submit_item(self):
+            self.client.post("/add", data={"title": "Test Item", "content": "Test Content"})
+
+        @task(10)  # 10% of requests target specific item details
+        def view_item(self):
+            item_id = 1  # Replace with an ID that exists in your database
+            self.client.get(f"/item/{item_id}")
+
+        @task(5)  # 5% of requests edit an existing item (GET and POST)
+        def edit_item(self):
+            item_id = 1  # Replace with an ID that exists in your database
+            self.client.get(f"/edit/{item_id}")
+            self.client.post(f"/edit/{item_id}", data={"title": "Updated Title", "content": "Updated Content"})
+
+        @task(3)  # 3% of requests delete an item
+        def delete_item(self):
+            item_id = 1  # Replace with an ID that exists in your database
+            self.client.get(f"/delete/{item_id}")
+
+        @task(2)  # 2% of requests target the health check endpoint
+        def health_check(self):
+            self.client.get("/health")
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: locust-ingress
+  namespace: locust-loadtest
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: locust.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: locust  # Service name correctly referenced
+            port:
+              number: 8089

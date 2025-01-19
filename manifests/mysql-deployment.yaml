@@ -10,7 +10,7 @@ spec:
   accessModes:
     - ReadWriteOnce  # Access mode (single node read/write)
   hostPath:
-    path: {{ vars.LOCAL_PATH }}  # Adjust for your Windows/Linux environment
+    path: "/mnt/c/Users/Juan.Orozco/Desktop/kubernetes-kubeadm-kubelet-nginx-onpremise"  # Adjust for your Windows/Linux environment
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -32,7 +32,7 @@ metadata:
   namespace: default  # Added namespace
 type: Opaque
 data:
-  password: "{{ secrets.MYSQL_PASSWORD }}"
+  password: "rootpassword"
 
 ---
 apiVersion: apps/v1
@@ -42,6 +42,7 @@ metadata:
   namespace: default  # Added namespace
   labels:
     app: mysql
+    prometheus: main  # Add the prometheus label
 spec:
   replicas: 1
   selector:
@@ -51,6 +52,10 @@ spec:
     metadata:
       labels:
         app: mysql
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3306"
+        prometheus.io/path: "/metrics" # Use a metrics exporter for MySQL
     spec:
       containers:
       - name: mysql
@@ -65,12 +70,11 @@ spec:
               name: mysql-secret
               key: password
         - name: MYSQL_DATABASE
-          value: "{{ vars.MYSQL_DB }}"  # Database name
+          value: "testdb"  # Database name
         volumeMounts:
         - mountPath: /var/lib/mysql  # MySQL data directory
           name: mysql-data
         securityContext:
-          readOnlyRootFilesystem: true
           runAsUser: 1000
           runAsNonRoot: true
         resources:
