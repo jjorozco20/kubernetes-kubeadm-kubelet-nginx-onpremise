@@ -18,14 +18,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Step 2: Install kubectl
-      - name: Install kubectl
-        run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          chmod +x kubectl
-          sudo mv kubectl /usr/local/bin/
-
-      # Step 3: Substitute environment variables in existing Kubernetes manifests
+      # Step 2: Substitute environment variables in existing Kubernetes manifests
       - name: Render Kubernetes Manifests
         run: |
           # Replace environment variables in flask-app-deployment.yaml
@@ -34,7 +27,7 @@ jobs:
           # Replace environment variables in mysql-deployment.yaml
           envsubst < manifests/mysql-deployment.yaml > manifests/mysql-deployment.yaml.tmp && mv manifests/mysql-deployment.yaml.tmp manifests/mysql-deployment.yaml
 
-      # Step 4: Run dry-run for Kubernetes manifests
+      # Step 3: Run dry-run for Kubernetes manifests
       - name: Validate Kubernetes Manifests
         run: |
           kubectl apply --dry-run=client -f manifests/

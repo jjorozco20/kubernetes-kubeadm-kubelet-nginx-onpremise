@@ -17,6 +17,7 @@ In my case, I did it using Linux, it's not that different, but for this repo I w
 * Kubeadm installed. Go [here](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/) to search how to do it.
 * Kubelet installed. It goes alongside Kubeadm installation, so just follow the previous one, but ensure you can access to it.
 * kubectl installed. Go [here](https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/) to search how to do it. Run `kubectl --version`.
+* Helm installed. Go [here](https://helm.sh/docs/intro/install/).
 
 ## Notes
 
